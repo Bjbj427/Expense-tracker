@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Jide's Expense Tracker</title>
+<style>
+  :root {
+    --ink: #1f2430;
+    --muted: #6b7280;
+    --line: #e4e4e7;
+    --accent: #1d6f5e;
+    --accent-light: #e8f3f0;
+    --bg: #fafaf9;
+    --card: #ffffff;
+    --danger: #b3441e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+  }
+  .wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 40px 20px 80px;
+  }
+  h1 {
+    font-size: 26px;
+    margin: 0 0 4px;
+    letter-spacing: -0.01em;
+  }
+  .sub {
+    color: var(--muted);
+    margin: 0 0 32px;
+    font-size: 14px;
+  }
+  .summary {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .summary-card {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+  .summary-card .label {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .summary-card .value {
+    font-size: 22px;
+    font-weight: 600;
+  }
+  section {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px 22px;
+    margin-bottom: 24px;
+  }
+  section h2 {
+    font-size: 15px;
+    margin: 0 0 14px;
+    color: var(--muted);
+    font-weight: 600;
+    text-transform: none;
+  }
+  form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: flex-end;
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .field label {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  input, select, textarea {
+    font: inherit;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--ink);
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
+    border-color: var(--accent);
+  }
+  #expense-title { width: 160px; }
+  #expense-amount { width: 100px; }
+  #expense-category { width: 140px; }
+  #expense-date { width: 140px; }
+  #expense-notes { width: 180px; }
+  #category-name { width: 200px; }
+
+  button {
+    font: inherit;
+    font-weight: 600;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+  }
+  button:hover { opacity: 0.92; }
+  button.ghost {
+    background: transparent;
+    color: var(--danger);
+    padding: 4px 8px;
+    font-weight: 500;
+    font-size: 13px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 6px;
+    border-bottom: 1px solid var(--line);
+  }
+  th {
+    color: var(--muted);
+    font-weight: 500;
+    font-size: 12px;
+  }
+  td.amount { text-align: right; font-variant-numeric: tabular-nums; }
+  th.amount { text-align: right; }
+  .tag {
+    display: inline-block;
+    background: var(--accent-light);
+    color: var(--accent);
+    padding: 2px 8px;
+    border-radius: 100px;
+    font-size: 12px;
+  }
+  .empty {
+    color: var(--muted);
+    font-size: 14px;
+    padding: 12px 0;
+  }
+  .status {
+    font-size: 13px;
+    margin-top: 10px;
+    min-height: 18px;
+  }
+  .status.error { color: var(--danger); }
+  .status.ok { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Jide's Expense Tracker</h1>
+  <p class="sub">Connected to <code id="api-base-label">http://127.0.0.1:8000/api/</code></p>
+
+  <div class="summary">
+    <div class="summary-card">
+      <div class="label">Total spent</div>
+      <div class="value" id="total-spent">—</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Expenses logged</div>
+      <div class="value" id="expense-count">—</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Categories</div>
+      <div class="value" id="category-count">—</div>
+    </div>
+  </div>
+
+  <section>
+    <h2>Add a category</h2>
+    <form id="category-form">
+      <div class="field">
+        <label for="category-name">Name</label>
+        <input id="category-name" type="text" placeholder="e.g. Food" required>
+      </div>
+      <button type="submit">Add category</button>
+    </form>
+    <div class="status" id="category-status"></div>
+  </section>
+
+  <section>
+    <h2>Add an expense</h2>
+    <form id="expense-form">
+      <div class="field">
+        <label for="expense-title">Title</label>
+        <input id="expense-title" type="text" placeholder="e.g. Lunch" required>
+      </div>
+      <div class="field">
+        <label for="expense-amount">Amount</label>
+        <input id="expense-amount" type="number" step="0.01" min="0" placeholder="0.00" required>
+      </div>
+      <div class="field">
+        <label for="expense-category">Category</label>
+        <select id="expense-category" required>
+          <option value="">Select…</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="expense-date">Date</label>
+        <input id="expense-date" type="date" required>
+      </div>
+      <div class="field">
+        <label for="expense-notes">Notes</label>
+        <input id="expense-notes" type="text" placeholder="optional">
+      </div>
+      <button type="submit">Add expense</button>
+    </form>
+    <div class="status" id="expense-status"></div>
+  </section>
+
+  <section>
+    <h2>All expenses</h2>
+    <div id="expenses-list">
+      <p class="empty">Loading…</p>
+    </div>
+  </section>
+</div>
+
+<script>
+const API_BASE = "http://127.0.0.1:8000/api/";
+
+const categorySelect = document.getElementById("expense-category");
+const expensesListEl = document.getElementById("expenses-list");
+const totalSpentEl = document.getElementById("total-spent");
+const expenseCountEl = document.getElementById("expense-count");
+const categoryCountEl = document.getElementById("category-count");
+const categoryStatus = document.getElementById("category-status");
+const expenseStatus = document.getElementById("expense-status");
+
+document.getElementById("expense-date").valueAsDate = new Date();
+
+function showStatus(el, message, isError) {
+  el.textContent = message;
+  el.className = "status " + (isError ? "error" : "ok");
+  if (message) {
+    setTimeout(() => { el.textContent = ""; el.className = "status"; }, 3000);
+  }
+}
+
+function formatMoney(n) {
+  return Number(n).toLocaleString("en-NG") + " NAIRA";
+}
+
+async function fetchCategories() {
+  const res = await fetch(API_BASE + "categories/");
+  if (!res.ok) throw new Error("Could not load categories");
+  return res.json();
+}
+
+async function fetchExpenses() {
+  const res = await fetch(API_BASE + "expenses/");
+  if (!res.ok) throw new Error("Could not load expenses");
+  return res.json();
+}
+
+function renderCategoryOptions(categories) {
+  categorySelect.innerHTML = '<option value="">Select…</option>';
+  categories.forEach(cat => {
+    const opt = document.createElement("option");
+    opt.value = cat.id;
+    opt.textContent = cat.name;
+    categorySelect.appendChild(opt);
+  });
+  categoryCountEl.textContent = categories.length;
+}
+
+function renderExpenses(expenses) {
+  if (!expenses.length) {
+    expensesListEl.innerHTML = '<p class="empty">No expenses yet — add one above.</p>';
+    totalSpentEl.textContent = formatMoney(0);
+    expenseCountEl.textContent = "0";
+    return;
+  }
+
+  const sorted = [...expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
+  let total = 0;
+
+  const rows = sorted.map(exp => {
+    total += Number(exp.amount);
+    return `
+      <tr data-id="${exp.id}">
+        <td>${escapeHtml(exp.title)}</td>
+        <td><span class="tag">${escapeHtml(exp.category_name || "—")}</span></td>
+        <td>${exp.date}</td>
+        <td class="amount">${formatMoney(exp.amount)}</td>
+        <td><button class="ghost" onclick="deleteExpense(${exp.id})">Delete</button></td>
+      </tr>`;
+  }).join("");
+
+  expensesListEl.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Category</th>
+          <th>Date</th>
+          <th class="amount">Amount</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+
+  totalSpentEl.textContent = formatMoney(total);
+  expenseCountEl.textContent = expenses.length;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str ?? "";
+  return div.innerHTML;
+}
+
+async function loadAll() {
+  try {
+    const [categories, expenses] = await Promise.all([fetchCategories(), fetchExpenses()]);
+    renderCategoryOptions(categories);
+    renderExpenses(expenses);
+  } catch (err) {
+    expensesListEl.innerHTML = `<p class="empty">Could not reach the API. Make sure the Django server is running and CORS is enabled. (${err.message})</p>`;
+  }
+}
+
+document.getElementById("category-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const nameInput = document.getElementById("category-name");
+  const name = nameInput.value.trim();
+  if (!name) return;
+
+  try {
+    const res = await fetch(API_BASE + "categories/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.name ? errData.name[0] : "Failed to add category");
+    }
+    nameInput.value = "";
+    showStatus(categoryStatus, "Category added.", false);
+    await loadAll();
+  } catch (err) {
+    showStatus(categoryStatus, err.message, true);
+  }
+});
+
+document.getElementById("expense-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const title = document.getElementById("expense-title").value.trim();
+  const amount = document.getElementById("expense-amount").value;
+  const category = document.getElementById("expense-category").value;
+  const date = document.getElementById("expense-date").value;
+  const notes = document.getElementById("expense-notes").value.trim();
+
+  if (!title || !amount || !category || !date) {
+    showStatus(expenseStatus, "Please fill in title, amount, category, and date.", true);
+    return;
+  }
+
+  try {
+    const res = await fetch(API_BASE + "expenses/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, amount, category: Number(category), date, notes }),
+    });
+    if (!res.ok) throw new Error("Failed to add expense");
+
+    document.getElementById("expense-form").reset();
+    document.getElementById("expense-date").valueAsDate = new Date();
+    showStatus(expenseStatus, "Expense added.", false);
+    await loadAll();
+  } catch (err) {
+    showStatus(expenseStatus, err.message, true);
+  }
+});
+
+async function deleteExpense(id) {
+  if (!confirm("Delete this expense?")) return;
+  try {
+    const res = await fetch(API_BASE + "expenses/" + id + "/", { method: "DELETE" });
+    if (!res.ok) throw new Error("Failed to delete");
+    await loadAll();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+loadAll();
+</script>
+</body>
+</html>
